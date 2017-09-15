@@ -11,14 +11,15 @@
         android:layout_width="250dp"
         android:layout_height="250dp"
         android:layout_marginTop="16dp"
+        android:background="@drawable/fotograf_ekle"
         android:onClick="fotografSec"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHorizontal_bias="0.485"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/txtEserIsmi"
         app:layout_constraintVertical_bias="0.091"
-        app:srcCompat="@android:color/holo_red_dark"
-        app:layout_constraintHorizontal_bias="0.485" />
+        app:srcCompat="@drawable/fotograf_ekle" />
 
     <EditText
         android:id="@+id/txtEserIsmi"
@@ -54,4 +55,14 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btnGuncelle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginRight="16dp"
+        android:text="Güncelle"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toLeftOf="@+id/btnKaydet" />
 </android.support.constraint.ConstraintLayout>

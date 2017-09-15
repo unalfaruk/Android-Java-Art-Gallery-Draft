@@ -19,10 +19,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -35,6 +37,7 @@ public class Main2Activity extends AppCompatActivity {
     TextView lblEserAdi;
     static SQLiteDatabase veritabani;
     Bitmap veritabaniFotograf;
+    Button btnGuncelle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,53 +46,138 @@ public class Main2Activity extends AppCompatActivity {
         imgEser= (ImageView) findViewById(R.id.imgEser);
         txtEserAdi= (EditText) findViewById(R.id.txtEserIsmi);
         lblEserAdi= (TextView) findViewById(R.id.lblEserAdi);
-        Button btnKaydet = (Button) findViewById(R.id.btnKaydet);
+        final Button btnKaydet = (Button) findViewById(R.id.btnKaydet);
+        btnGuncelle = (Button) findViewById(R.id.btnGuncelle);
+        btnGuncelle.setVisibility(View.INVISIBLE);
 
         Intent intent = getIntent();
         String info = intent.getStringExtra("info");
 
         if(info.equalsIgnoreCase("new")){
-            imgEser.setBackgroundColor(getApplicationContext().getResources().getColor(android.R.color.holo_red_dark));
+            imgEser.setImageDrawable(getApplicationContext().getResources().getDrawable(R.drawable.fotograf_ekle));
             btnKaydet.setVisibility(View.VISIBLE);
             lblEserAdi.setVisibility(View.INVISIBLE);
             txtEserAdi.setVisibility(View.VISIBLE);
             txtEserAdi.setText("");
         }else{
-            int pozisyon=intent.getIntExtra("pozisyon",0);
+            final int pozisyon=intent.getIntExtra("pozisyon",0);
             txtEserAdi.setVisibility(View.INVISIBLE);
             lblEserAdi.setText(MainActivity.eserAdlari.get(pozisyon));
             lblEserAdi.setVisibility(View.VISIBLE);
             imgEser.setImageBitmap(MainActivity.eserFotograflari.get(pozisyon));
-            btnKaydet.setVisibility(View.INVISIBLE);
+            btnKaydet.setText("Sil");
+            btnGuncelle.setVisibility(View.VISIBLE);
+            btnKaydet.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v) {
+                    sil(MainActivity.eserAdlari.get(pozisyon));
+                }
+            });
+
+            btnGuncelle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    lblEserAdi.setVisibility(View.INVISIBLE);
+                    txtEserAdi.setVisibility(View.VISIBLE);
+                    txtEserAdi.setText(MainActivity.eserAdlari.get(pozisyon));
+                    Toast.makeText(getApplicationContext(), "Sadece eser ismi güncellenebilir", Toast.LENGTH_LONG).show();
+                    btnGuncelle.setText("Kaydet");
+                    btnKaydet.setEnabled(false);
+                    btnGuncelle.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            guncelle(MainActivity.eserAdlari.get(pozisyon));
+                        }
+                    });
+
+
+                }
+            });
+
         }
 
     }
 
-    public void kaydet(View view){
-        String isim = txtEserAdi.getText().toString();
-
-        //Veritabanına fotoğraf kaydetmek için byte dizisine çeviriyoruz.
-        ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
-        veritabaniFotograf.compress(Bitmap.CompressFormat.PNG,50,outputStream);
-        byte[] byteArray = outputStream.toByteArray();
-
+    public void sil(String isim){
         try{
-            veritabani=this.openOrCreateDatabase("SanatEserleri",MODE_PRIVATE, null);
-            veritabani.execSQL("CREATE TABLE IF NOT EXISTS eserler (isim VARCHAR, fotograf BLOB)");
+            veritabani = this.openOrCreateDatabase("SanatEserleri",MODE_PRIVATE, null);
 
-            String sqlSorgusu = "INSERT INTO eserler (isim,fotograf) VALUES (?,?)";
+            String sqlSorgusu = "DELETE FROM eserler WHERE isim=?";
 
             SQLiteStatement statement=veritabani.compileStatement(sqlSorgusu);
             statement.bindString(1,isim);
-            statement.bindBlob(2,byteArray);
             statement.execute();
-
         }catch (Exception e){
             e.printStackTrace();
         }
 
         Intent intent=new Intent(getApplicationContext(), MainActivity.class);
         startActivity(intent);
+
+    }
+
+    public void guncelle(String isim){
+
+        try{
+            veritabani = this.openOrCreateDatabase("SanatEserleri",MODE_PRIVATE, null);
+
+            String sqlSorgusu = "UPDATE eserler SET isim=? WHERE isim=?";
+
+            SQLiteStatement statement=veritabani.compileStatement(sqlSorgusu);
+            statement.bindString(1,txtEserAdi.getText().toString());
+            statement.bindString(2,isim);
+            statement.execute();
+        }catch (Exception e){
+            e.printStackTrace();
+            System.out.println(e);
+            Log.w("Hata", e);
+        }
+
+        Intent intent=new Intent(getApplicationContext(), MainActivity.class);
+        startActivity(intent);
+    }
+
+    public void kaydet(View view){
+
+        String isim = txtEserAdi.getText().toString();
+
+        if(veritabaniFotograf==null){
+            Toast.makeText(getApplicationContext(),"Fotoğraf çekmelisin!",Toast.LENGTH_LONG).show();
+
+        }else{
+            if(isim==null || isim.isEmpty()){
+                DateFormat dateFormat = new SimpleDateFormat("HHmmss");
+                Date date = new Date();
+
+                isim="Eser"+dateFormat.format(date);
+            }
+
+
+            //Veritabanına fotoğraf kaydetmek için byte dizisine çeviriyoruz.
+            ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
+            veritabaniFotograf.compress(Bitmap.CompressFormat.PNG,50,outputStream);
+            byte[] byteArray = outputStream.toByteArray();
+
+            try{
+                veritabani=this.openOrCreateDatabase("SanatEserleri",MODE_PRIVATE, null);
+                veritabani.execSQL("CREATE TABLE IF NOT EXISTS eserler (isim VARCHAR, fotograf BLOB)");
+
+                String sqlSorgusu = "INSERT INTO eserler (isim,fotograf) VALUES (?,?)";
+
+                SQLiteStatement statement=veritabani.compileStatement(sqlSorgusu);
+                statement.bindString(1,isim);
+                statement.bindBlob(2,byteArray);
+                statement.execute();
+
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+            Intent intent=new Intent(getApplicationContext(), MainActivity.class);
+            startActivity(intent);
+        }
+
+
     }
 
     public void fotografSec(View view){
