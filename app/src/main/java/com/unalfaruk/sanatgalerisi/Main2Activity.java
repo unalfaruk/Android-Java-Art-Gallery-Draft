@@ -2,6 +2,8 @@ package com.unalfaruk.sanatgalerisi;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -13,8 +15,12 @@ import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -25,29 +31,69 @@ public class Main2Activity extends AppCompatActivity {
     ImageView imgEser;
     String mCurrentPhotoPath;
     static final int REQUEST_TAKE_PHOTO = 1;
+    EditText txtEserAdi;
+    TextView lblEserAdi;
+    static SQLiteDatabase veritabani;
+    Bitmap veritabaniFotograf;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
         imgEser= (ImageView) findViewById(R.id.imgEser);
+        txtEserAdi= (EditText) findViewById(R.id.txtEserIsmi);
+        lblEserAdi= (TextView) findViewById(R.id.lblEserAdi);
+        Button btnKaydet = (Button) findViewById(R.id.btnKaydet);
+
+        Intent intent = getIntent();
+        String info = intent.getStringExtra("info");
+
+        if(info.equalsIgnoreCase("new")){
+            imgEser.setBackgroundColor(getApplicationContext().getResources().getColor(android.R.color.holo_red_dark));
+            btnKaydet.setVisibility(View.VISIBLE);
+            lblEserAdi.setVisibility(View.INVISIBLE);
+            txtEserAdi.setVisibility(View.VISIBLE);
+            txtEserAdi.setText("");
+        }else{
+            int pozisyon=intent.getIntExtra("pozisyon",0);
+            txtEserAdi.setVisibility(View.INVISIBLE);
+            lblEserAdi.setText(MainActivity.eserAdlari.get(pozisyon));
+            lblEserAdi.setVisibility(View.VISIBLE);
+            imgEser.setImageBitmap(MainActivity.eserFotograflari.get(pozisyon));
+            btnKaydet.setVisibility(View.INVISIBLE);
+        }
+
     }
 
     public void kaydet(View view){
+        String isim = txtEserAdi.getText().toString();
 
+        //Veritabanına fotoğraf kaydetmek için byte dizisine çeviriyoruz.
+        ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
+        veritabaniFotograf.compress(Bitmap.CompressFormat.PNG,50,outputStream);
+        byte[] byteArray = outputStream.toByteArray();
+
+        try{
+            veritabani=this.openOrCreateDatabase("SanatEserleri",MODE_PRIVATE, null);
+            veritabani.execSQL("CREATE TABLE IF NOT EXISTS eserler (isim VARCHAR, fotograf BLOB)");
+
+            String sqlSorgusu = "INSERT INTO eserler (isim,fotograf) VALUES (?,?)";
+
+            SQLiteStatement statement=veritabani.compileStatement(sqlSorgusu);
+            statement.bindString(1,isim);
+            statement.bindBlob(2,byteArray);
+            statement.execute();
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        Intent intent=new Intent(getApplicationContext(), MainActivity.class);
+        startActivity(intent);
     }
 
     public void fotografSec(View view){
         dispatchTakePictureIntent();
-        /*Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(takePicture,1);
-        if(checkSelfPermission(Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
-            requestPermissions(new String[] {Manifest.permission.CAMERA},2);
-        }else{
-            Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            startActivityForResult(takePicture,1);
-        }*/
-
     }
 
     @Override
@@ -133,6 +179,7 @@ public class Main2Activity extends AppCompatActivity {
 
 
         Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+        veritabaniFotograf=bitmap;
         imgEser.setImageBitmap(bitmap);
     }
 }
